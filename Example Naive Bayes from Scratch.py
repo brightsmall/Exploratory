@@ -21,6 +21,7 @@ for i in range(len(dataset)):
 
 splitRatio = 0.67
     
+# Start with all data in test set and randomly "pop" rows out of test set and into training set
 
 trainSize = int(len(dataset) * splitRatio)
 trainSet = []
@@ -51,40 +52,59 @@ def stdev(numbers):
 	variance = sum([pow(x-avg,2) for x in numbers])/float(len(numbers)-1)
 	return math.sqrt(variance)
  
+# summarize function uses "zip" to restructure data into a column (tuple) of data for each attribute    
+
 def summarize(dataset):
 	summaries = [(mean(attribute), stdev(attribute)) for attribute in zip(*dataset)]
-	del summaries[-1]
+	del summaries[-1] # no summary is returned for the position representing the class
 	return summaries
  
+# summary statitics are computed using the full dataset (training and test) 
+    
 summaries = {}
 for classValue, instances in separated.items():
 	summaries[classValue] = summarize(instances)
 
+#######################################################################################
 
 # returns probability density for a value x on a normal curve of a given mean and stdev 
 def calculateProbability(x, mean, stdev):
 	exponent = math.exp(-(math.pow(x-mean,2)/(2*math.pow(stdev,2))))
 	return (1 / (math.sqrt(2*math.pi) * stdev)) * exponent
+
+
  
 def calculateClassProbabilities(summaries, inputVector):
-	probabilities = {}
-	for classValue, classSummaries in summaries.iteritems():
-		probabilities[classValue] = 1
-		for i in range(len(classSummaries)):
-			mean, stdev = classSummaries[i]
-			x = inputVector[i]
-			probabilities[classValue] *= calculateProbability(x, mean, stdev)
-	return probabilities
+	
+    probabilities = {} # probabilities is a dictionary that when returned will have a key for the class
+                       # and a corresponding value that represents the probability for that class
+    
+# outer loop iterates through classes
+    for classValue, classSummaries in summaries.items():
+        probabilities[classValue] = 1
+        
+      # inner loop iterates through attributes, multiplying the class probability
+      # by the class probability for that attribute
+        for i in range(len(classSummaries)):
+            mean, stdev = classSummaries[i]
+            x = inputVector[i]
+            probabilities[classValue] *= calculateProbability(x, mean, stdev)
+    return probabilities
 			
+# this function just returns the class label corresponding to the highest probability in
+# the "probabilities" dictionary
+    
 def predict(summaries, inputVector):
 	probabilities = calculateClassProbabilities(summaries, inputVector)
 	bestLabel, bestProb = None, -1
-	for classValue, probability in probabilities.iteritems():
+	for classValue, probability in probabilities.items():
 		if bestLabel is None or probability > bestProb:
 			bestProb = probability
 			bestLabel = classValue
 	return bestLabel
  
+# this function iterates through the rows of the test set and gets a label for each    
+
 def getPredictions(summaries, testSet):
 	predictions = []
 	for i in range(len(testSet)):
@@ -99,19 +119,13 @@ def getAccuracy(testSet, predictions):
 			correct += 1
 	return (correct/float(len(testSet))) * 100.0
  
-#################################3333    
+#########################################################################
 
-
-
-dataset = loadCsv(filename)
-
-trainingSet, testSet = splitDataset(dataset, splitRatio)
-print('Split {0} rows into train={1} and test={2} rows').format(len(dataset), len(trainingSet), len(testSet))
-# prepare model
-summaries = summarizeByClass(trainingSet)
 # test model
 predictions = getPredictions(summaries, testSet)
+
 accuracy = getAccuracy(testSet, predictions)
-print('Accuracy: {0}%').format(accuracy)
+
+print('Accuracy: {0}%'.format(accuracy))
  
 
